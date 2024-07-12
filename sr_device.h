@@ -7,9 +7,9 @@
 //number of analog channels
 #define NUM_A_CHAN 3
 //number of digital channels
-#define NUM_D_CHAN 21
-//Mask of bits 22:2 to use as inputs - 
-#define GPIO_D_MASK 0x7FFFFC
+#define NUM_D_CHAN 6
+//Mask of bits 25:20 to use as inputs - 
+#define GPIO_D_MASK 0x3F00000
 //Storage size of the DMA buffer.  The buffer is split into two halves so that when the first
 //buffer fills we can send the trace data serially while the other buffer is DMA'dinto
 #define DMA_BUF_SIZE 220000
@@ -264,32 +264,56 @@ int process_char(sr_device_t *d,char charin){
             Dprintf("Pre-trigger samples %d cmd %s\n\r",tmpint,d->cmdstr);
             ret=1;
             break;
-      //format is Axyy where x is 0 for disabled, 1 for enabled and yy is channel #
-      case 'A':  ///enable analog channel always a set
-            tmpint=d->cmdstr[1]-'0'; //extract enable value
-            tmpint2=atoi(&(d->cmdstr[2])); //extract channel number
-            if((tmpint>=0)&&(tmpint<=1)&&(tmpint2>=0)&&(tmpint2<=31)){
-               d->a_mask=d->a_mask & ~(1<<tmpint2);
-               d->a_mask=d->a_mask | (tmpint<<tmpint2);
-               //Dprintf("A%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->a_mask);
-               ret=1;
-            }else{
-               ret=0;
-            }
-            break;
-      //format is Dxyy where x is 0 for disabled, 1 for enabled and yy is channel #
-       case 'D':  ///enable digital channel always a set
-            tmpint=d->cmdstr[1]-'0'; //extract enable value
-            tmpint2=atoi(&(d->cmdstr[2])); //extract channel number
-            if((tmpint>=0)&&(tmpint<=1)&&(tmpint2>=0)&&(tmpint2<=31)){
-               d->d_mask=d->d_mask & ~(1<<tmpint2);
-               d->d_mask=d->d_mask | (tmpint<<tmpint2);
-               //Dprintf("D%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->d_mask);
-               ret=1;
-             }else{
-                ret=0;
-             }
-             break;
+      // //format is Axyy where x is 0 for disabled, 1 for enabled and yy is channel #
+      // case 'A':  ///enable analog channel always a set
+      //       tmpint=d->cmdstr[1]-'0'; //extract enable value
+      //       tmpint2=atoi(&(d->cmdstr[2])); //extract channel number
+      //       if((tmpint>=0)&&(tmpint<=1)&&(tmpint2>=0)&&(tmpint2<=31)){
+      //          d->a_mask=d->a_mask & ~(1<<tmpint2);
+      //          d->a_mask=d->a_mask | (tmpint<<tmpint2);
+      //          //Dprintf("A%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->a_mask);
+      //          ret=1;
+      //       }else{
+      //          ret=0;
+      //       }
+      //       break;
+      // //format is Dxyy where x is 0 for disabled, 1 for enabled and yy is channel #
+      //  case 'D':  ///enable digital channel always a set
+      //       tmpint=d->cmdstr[1]-'0'; //extract enable value
+      //       tmpint2=atoi(&(d->cmdstr[2])); //extract channel number
+      //       if((tmpint>=0)&&(tmpint<=1)&&(tmpint2>=0)&&(tmpint2<=31)){
+      //          d->d_mask=d->d_mask & ~(1<<tmpint2);
+      //          d->d_mask=d->d_mask | (tmpint<<tmpint2);
+      //          //Dprintf("D%d EN %d Msk 0x%X\n\r",tmpint2,tmpint,d->d_mask);
+      //          ret=1;
+      //        }else{
+      //           ret=0;
+      //        }
+      //        break;
+      case 'D':  // enable digital channel
+        tmpint = d->cmdstr[1] - '0'; // extract enable value
+        tmpint2 = atoi(&(d->cmdstr[2])); // extract channel number
+        if ((tmpint >= 0) && (tmpint <= 1) && (tmpint2 >= 0) && (tmpint2 < NUM_D_CHAN)) {
+            uint32_t gpio_num = tmpint2 + 20; // Map D0-D5 to GPIO20-25
+            d->d_mask = d->d_mask & ~(1 << gpio_num);
+            d->d_mask = d->d_mask | (tmpint << gpio_num);
+            ret = 1;
+        } else {
+            ret = 0;
+        }
+        break;
+
+      case 'A':  // enable analog channel
+        tmpint = d->cmdstr[1] - '0'; // extract enable value
+        tmpint2 = atoi(&(d->cmdstr[2])); // extract channel number
+        if ((tmpint >= 0) && (tmpint <= 1) && (tmpint2 >= 0) && (tmpint2 < NUM_A_CHAN)) {
+            d->a_mask = d->a_mask & ~(1 << tmpint2);
+            d->a_mask = d->a_mask | (tmpint << tmpint2);
+            ret = 1;
+        } else {
+            ret = 0;
+        }
+        break;
         default:
              Dprintf("bad command %s\n\r",d->cmdstr);
              ret=0;
